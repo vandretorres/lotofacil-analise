@@ -91,9 +91,12 @@ if sorteios_disponiveis:
     grupos_por_sorteio = listar_apostas_por_sorteio(sorteio_escolhido)
 
     if grupos_por_sorteio:
-        id_escolhido = st.selectbox("Selecione o grupo de apostas:", [g["id_grupo"] for g in grupos_por_sorteio])
+        
+        opcoes_grupo = {f"{g['id_grupo'][-8:]} - {g['modelo_utilizado']} - {g['data_geracao']}": g for g in grupos_por_sorteio}
+        id_escolhido = st.selectbox("Selecione o grupo de apostas:", list(opcoes_grupo.keys()))
+        grupo_selecionado = opcoes_grupo[id_escolhido]  # Busca diretamente pelo ID completo
 
-        grupo_selecionado = next(g for g in grupos_por_sorteio if g["id_grupo"] == id_escolhido)
+
         st.write(f"**Data de Geração:** `{grupo_selecionado['data_geracao']}`")
         st.write(f"**Vinculado ao Sorteio:** `{grupo_selecionado['sorteio_vinculado']}`")
         st.write(f"**Sugestão Gerada:** `{', '.join(map(str, grupo_selecionado['sugestao_gerada']))}`")
