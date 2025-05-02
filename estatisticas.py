@@ -1,12 +1,20 @@
 import pandas as pd
 
-def analisar_frequencia(df):
-    """ Calcula a frequência de cada número sorteado """
-    frequencia = df.melt(value_name="Numero")["Numero"].value_counts()
-    return frequencia.sort_values(ascending=False)
+def obter_estatisticas(df):
+    """Calcula estatísticas gerais dos sorteios."""
+    total_jogos = len(df)
+    ultimo_sorteio = df.index[-1] if not df.empty else "Nenhum sorteio encontrado"
+    
+    # Identificar números mais sorteados
+    contagem_numeros = df.iloc[:, 1:].apply(pd.Series.value_counts).sum(axis=1).sort_values(ascending=False)
+    mais_sorteados = contagem_numeros.head(10).index.tolist()
 
-def verificar_padroes(df):
-    """ Identifica repetições e padrões comuns nos sorteios """
-    sequencias = df.apply(lambda row: tuple(sorted(row)), axis=1)
-    padroes_comuns = sequencias.value_counts()
-    return padroes_comuns.head(10)  # Mostra os 10 padrões mais comuns
+    # Média de acertos por sorteio (quantidade de números sorteados por concurso)
+    media_acertos = contagem_numeros.mean()
+
+    return {
+        "total_jogos": total_jogos,
+        "ultimo_sorteio": ultimo_sorteio,
+        "mais_sorteados": mais_sorteados,
+        "media_acertos": round(media_acertos, 2)
+    }
