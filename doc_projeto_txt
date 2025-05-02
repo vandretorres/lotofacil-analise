@@ -1,0 +1,74 @@
+Documentação do Projeto de Análise e Geração de Jogos da Lotofácil
+Introdução
+Este projeto tem como objetivo realizar análises estatísticas e preditivas sobre os sorteios da Lotofácil, permitindo a geração de jogos estratégicos com base em padrões e simulações matemáticas. A aplicação utiliza machine learning para prever tendências e simular combinações probabilísticas, permitindo ao usuário escolher entre dois modelos preditivos: Random Forest e Rede Neural (MLP).
+
+Estrutura do Projeto
+O projeto é estruturado nos seguintes arquivos principais:
+- analise_lotofacil.py → Arquivo principal que coordena todo o fluxo da análise.
+- dados.py → Responsável pela carga e tratamento dos dados históricos da Lotofácil.
+- estatisticas.py → Executa análise de frequência e padrões recorrentes nos sorteios.
+- predicao.py → Treina os modelos preditivos e realiza simulação de Monte Carlo.
+- gerador_jogos.py → Gera sugestões de jogos a partir dos resultados da simulação.
+
+Fluxo da Aplicação
+- Coleta de dados históricos: O programa carrega os sorteios anteriores da Lotofácil.
+- Análise estatística: Identifica padrões de frequência e recorrência dos números sorteados.
+- Treinamento do modelo: O usuário escolhe entre Random Forest ou MLP, e o modelo é treinado para identificar possíveis tendências.
+- Simulação de Monte Carlo: Gera milhares de combinações e retorna as mais prováveis.
+- Sugestão de apostas: O programa gera automaticamente combinações otimizadas para possíveis apostas.
+
+Explicação do Código Criado
+1️⃣ Predição e Modelagem (predicao.py)
+Este arquivo contém funções essenciais para treinar modelos de machine learning e realizar previsões.
+Treinamento do Modelo
+def treinar_modelo(df, modelo_escolhido="RandomForest"):
+
+
+- Carrega e estrutura os dados históricos.
+- Transforma os resultados em formato binário usando MultiLabelBinarizer().
+- Treina um modelo preditivo, podendo ser Random Forest ou MLPClassifier.
+Simulação de Monte Carlo
+def simulacao_monte_carlo(modelo, mlb, df, n_simulacoes=1000):
+
+
+- Gera milhares de jogos simulados para calcular probabilidades.
+- Filtra previsões para retornar apenas combinações de 15 números corretamente.
+
+2️⃣ Análise Estatística (estatisticas.py)
+Executa cálculos sobre frequência e padrões nos sorteios da Lotofácil.
+Análise de Frequência
+def analisar_frequencia(df):
+
+
+- Conta quantas vezes cada número já foi sorteado na história da Lotofácil.
+Verificação de Padrões
+def verificar_padroes(df):
+
+
+- Identifica conjuntos recorrentes de números que aparecem juntos nos sorteios.
+
+3️⃣ Geração de Jogos (gerador_jogos.py)
+Este módulo cria as apostas finais com base nas previsões do modelo.
+Gerar Sugestões de Apostas
+def gerar_jogos(df, modelo, mlb, quantidade=5):
+
+
+- Usa a Simulação de Monte Carlo para gerar jogos otimizados.
+- Garante que cada aposta contenha exatamente 15 dezenas.
+
+Como Executar o Programa
+- Rodar o script principal:
+python analise_lotofacil.py
+- O usuário será solicitado a escolher o modelo:
+Escolha o modelo preditivo ('RandomForest' ou 'MLP'):
+- O sistema realizará análises, predições e simulações, retornando:
+- Estatísticas dos sorteios
+- Previsões dos modelos
+- Sugestões otimizadas de jogos
+
+Considerações Finais
+✅ Random Forest e Rede Neural disponíveis para previsão.
+✅ Análises estatísticas garantem insights sobre sorteios passados.
+✅ Simulação de Monte Carlo aprimora as sugestões de apostas.
+✅ Sistema robusto para continuar evoluindo com mais dados!
+Essa documentação será útil para futuras melhorias ou ajustes! 🚀 Me avise se quiser incluir algo mais. 
