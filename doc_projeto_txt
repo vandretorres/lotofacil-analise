@@ -1,74 +1,129 @@
-Documentação do Projeto de Análise e Geração de Jogos da Lotofácil
-Introdução
-Este projeto tem como objetivo realizar análises estatísticas e preditivas sobre os sorteios da Lotofácil, permitindo a geração de jogos estratégicos com base em padrões e simulações matemáticas. A aplicação utiliza machine learning para prever tendências e simular combinações probabilísticas, permitindo ao usuário escolher entre dois modelos preditivos: Random Forest e Rede Neural (MLP).
+Projeto: Análise e Previsão de Sorteios da Lotofácil
+1. Objetivo
+Criar um sistema capaz de ler arquivos CSV/XLSX com históricos de sorteios da Lotofácil, realizar análises estatísticas e predições baseadas em inteligência artificial e simulações matemáticas para sugerir combinações otimizadas para futuras apostas.
+2. Estrutura do Projeto
+📂 lotofacil-analise
+┣ 📜 analise_lotofacil.py → Código principal
+┣ 📜 dados.py → Funções para carregar e limpar dados
+┣ 📜 estatisticas.py → Análises estatísticas dos sorteios
+┣ 📜 predicao.py → Modelagem preditiva e Machine Learning
+┣ 📜 gerador_jogos.py → Geração dos jogos recomendados
+┣ 📂 data/ → Pasta onde o arquivo Lotofácil.xlsx é armazenado
+3. Configuração do Ambiente
+Antes de rodar o projeto, instale as bibliotecas necessárias usando:
+pip install pandas numpy matplotlib seaborn scikit-learn 
+4. Carregamento e Preparo dos Dados
+📜 dados.py
+import pandas as pd
 
-Estrutura do Projeto
-O projeto é estruturado nos seguintes arquivos principais:
-- analise_lotofacil.py → Arquivo principal que coordena todo o fluxo da análise.
-- dados.py → Responsável pela carga e tratamento dos dados históricos da Lotofácil.
-- estatisticas.py → Executa análise de frequência e padrões recorrentes nos sorteios.
-- predicao.py → Treina os modelos preditivos e realiza simulação de Monte Carlo.
-- gerador_jogos.py → Gera sugestões de jogos a partir dos resultados da simulação.
+def carregar_dados(arquivo="data/Lotofacil.xlsx"):
+    """ Carrega os dados do arquivo da Lotofácil """
+    df = pd.read_excel(arquivo)
+    
+    # Selecionando apenas colunas de números sorteados
+    colunas_numeros = [f"Bola{i}" for i in range(1, 16)]
+    df_numeros = df[colunas_numeros]
+    
+    return df_numeros5. Estatísticas Básicas
+📜 estatisticas.py
+import pandas as pd
 
-Fluxo da Aplicação
-- Coleta de dados históricos: O programa carrega os sorteios anteriores da Lotofácil.
-- Análise estatística: Identifica padrões de frequência e recorrência dos números sorteados.
-- Treinamento do modelo: O usuário escolhe entre Random Forest ou MLP, e o modelo é treinado para identificar possíveis tendências.
-- Simulação de Monte Carlo: Gera milhares de combinações e retorna as mais prováveis.
-- Sugestão de apostas: O programa gera automaticamente combinações otimizadas para possíveis apostas.
-
-Explicação do Código Criado
-1️⃣ Predição e Modelagem (predicao.py)
-Este arquivo contém funções essenciais para treinar modelos de machine learning e realizar previsões.
-Treinamento do Modelo
-def treinar_modelo(df, modelo_escolhido="RandomForest"):
-
-
-- Carrega e estrutura os dados históricos.
-- Transforma os resultados em formato binário usando MultiLabelBinarizer().
-- Treina um modelo preditivo, podendo ser Random Forest ou MLPClassifier.
-Simulação de Monte Carlo
-def simulacao_monte_carlo(modelo, mlb, df, n_simulacoes=1000):
-
-
-- Gera milhares de jogos simulados para calcular probabilidades.
-- Filtra previsões para retornar apenas combinações de 15 números corretamente.
-
-2️⃣ Análise Estatística (estatisticas.py)
-Executa cálculos sobre frequência e padrões nos sorteios da Lotofácil.
-Análise de Frequência
 def analisar_frequencia(df):
+    """ Calcula a frequência de cada número sorteado """
+    frequencia = df.melt(value_name="Numero")["Numero"].value_counts()
+    return frequencia.sort_values(ascending=False)
 
-
-- Conta quantas vezes cada número já foi sorteado na história da Lotofácil.
-Verificação de Padrões
 def verificar_padroes(df):
+    """ Identifica repetições e padrões comuns nos sorteios """
+    sequencias = df.apply(lambda row: tuple(sorted(row)), axis=1)
+    padroes_comuns = sequencias.value_counts()
+    return padroes_comuns.head(10)  # Mostra os 10 padrões mais comuns
+
+6. Modelagem e Predição
+📜 predicao.py
+from sklearn.model_selection import train_test_split from sklearn.ensemble import RandomForestClassifier import numpy as np import pandas as pd def treinar_modelo(df): X = df.shift(1).dropna() y = df.iloc[X.index] # Garante que y tenha a mesma dimensão de X X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) modelo = RandomForestClassifier() modelo.fit(X_train, y_train) return modelo def simulacao_monte_carlo(modelo, n_simulacoes=1000): resultados = [tuple(sorted(np.random.choice(range(1, 26), 15, replace=False))) for _ in range(n_simulacoes)] frequencias = pd.Series(resultados).value_counts() return frequencias.head(10) 
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+import numpy as np
+import pandas as pd
+
+def treinar_modelo(df):
+    """ Treina um modelo simples de Machine Learning para prever padrões """
+    X = df.shift(1).dropna()  # Usa sorteios anteriores como entrada
+    y = df.iloc[X.index]  # Garante que y tenha a mesma dimensão de X
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    modelo = RandomForestClassifier()
+    modelo.fit(X_train, y_train)
+
+    return modelo
+
+def simulacao_monte_carlo(modelo, n_simulacoes=1000):
+    """ Simula combinações possíveis para estimar probabilidades """
+    resultados = [tuple(sorted(np.random.choice(range(1, 26), 15, replace=False))) for _ in range(n_simulacoes)]
+    frequencias = pd.Series(resultados).value_counts()
+    
+    return frequencias.head(10)  # Mostra as 10 combinações mais prováveis
+
+7. Geração de Jogos
+📜 gerador_jogos.py
+
+import numpy as np
+import pandas as pd
+from predicao import simulacao_monte_carlo
 
 
-- Identifica conjuntos recorrentes de números que aparecem juntos nos sorteios.
+def gerar_jogos(df, modelo, quantidade=10):
+    """ Gera um conjunto de jogos baseado nas probabilidades aprendidas """
+    melhores_combinacoes = simulacao_monte_carlo(modelo, 5000)  # Simulação mais extensa
+    jogos_sugeridos = melhores_combinacoes.head(quantidade).index  # Pega as N melhores combinações
+    
+    return jogos_sugeridos
 
-3️⃣ Geração de Jogos (gerador_jogos.py)
-Este módulo cria as apostas finais com base nas previsões do modelo.
-Gerar Sugestões de Apostas
-def gerar_jogos(df, modelo, mlb, quantidade=5):
 
 
-- Usa a Simulação de Monte Carlo para gerar jogos otimizados.
-- Garante que cada aposta contenha exatamente 15 dezenas.
+8. Código Principal
+📜 analise_lotofacil.py
 
-Como Executar o Programa
-- Rodar o script principal:
-python analise_lotofacil.py
-- O usuário será solicitado a escolher o modelo:
-Escolha o modelo preditivo ('RandomForest' ou 'MLP'):
-- O sistema realizará análises, predições e simulações, retornando:
-- Estatísticas dos sorteios
-- Previsões dos modelos
-- Sugestões otimizadas de jogos
 
-Considerações Finais
-✅ Random Forest e Rede Neural disponíveis para previsão.
-✅ Análises estatísticas garantem insights sobre sorteios passados.
-✅ Simulação de Monte Carlo aprimora as sugestões de apostas.
-✅ Sistema robusto para continuar evoluindo com mais dados!
-Essa documentação será útil para futuras melhorias ou ajustes! 🚀 Me avise se quiser incluir algo mais. 
+from dados import carregar_dados
+from estatisticas import analisar_frequencia, verificar_padroes
+from predicao import treinar_modelo, simulacao_monte_carlo
+from gerador_jogos import gerar_jogos
+
+
+
+# 1. Carregar dados
+df = carregar_dados()
+
+# 2. Estatísticas
+frequencia = analisar_frequencia(df)
+print("📊 Frequência dos números sorteados:\n", frequencia.head(10))
+
+padroes = verificar_padroes(df)
+print("🔍 Padrões de sorteios recorrentes:\n", padroes.head(5))
+
+# 3. Treinar modelo preditivo
+modelo = treinar_modelo(df)
+
+# 4. Simulação de Monte Carlo
+simulacao = simulacao_monte_carlo(modelo)
+print("🎲 Simulação de Monte Carlo - combinações prováveis:\n", simulacao.head(10))
+
+# 5. Gerar jogos para apostar
+jogos = gerar_jogos(df, modelo, quantidade=5)  # Ajuste o número de jogos aqui
+print("🎯 Sugestões de apostas:\n", jogos)
+
+9. Como Executar
+1.	Certifique-se de que Lotofácil.xlsx está na pasta data/.
+2.	Rode cada módulo separadamente para testar:
+python dados.py python estatisticas.py python predicao.py python gerador_jogos.py 
+3.	Depois, execute o código principal para ver os resultados:
+python analise_lotofacil.py 
+10. Melhorias Futuras
+🔹 Gráficos interativos para visualizar padrões
+🔹 Aprimorar machine learning com redes neurais
+🔹 Automatizar coleta de novos sorteios online
+💾 Agora é só copiar esse conteúdo para um documento Word ou Google Docs e exportar como PDF!
+Me avise se quiser adicionar mais detalhes! 🚀
+
