@@ -47,11 +47,15 @@ if st.button("🔄 Gerar sugestão de aposta"):
         "id_grupo": id_grupo,
         "data_geracao": data_geracao,
         "sorteio_vinculado": proximo_sorteio,
+        "modelo_utilizado": modelo_escolhido,  # Novo campo
         "sugestao_gerada": melhores_numeros,
         "apostas_sugeridas": sugestao_jogos
     }
 
     st.success(f"✅ Grupo de apostas gerado! ID: {id_grupo} | Vinculado ao Sorteio {proximo_sorteio}")
+
+
+
 
 # 📜 Exibir sugestões geradas
 if "grupo_apostas" in st.session_state:
@@ -61,7 +65,7 @@ if "grupo_apostas" in st.session_state:
     st.write(f"**Vinculado ao sorteio:** `{st.session_state['grupo_apostas']['sorteio_vinculado']}`")
     st.write(f"**Sugestão Gerada:** `{', '.join(map(str, st.session_state['grupo_apostas']['sugestao_gerada']))}`")
 
-    print("DEBUG - Estrutura das apostas sugeridas:", st.session_state["grupo_apostas"]["apostas_sugeridas"])
+    #print("DEBUG - Estrutura das apostas sugeridas:", st.session_state["grupo_apostas"]["apostas_sugeridas"])
 
     
     st.write("**Apostas Sugeridas:**")
@@ -93,6 +97,7 @@ if sorteios_disponiveis:
         st.write(f"**Data de Geração:** `{grupo_selecionado['data_geracao']}`")
         st.write(f"**Vinculado ao Sorteio:** `{grupo_selecionado['sorteio_vinculado']}`")
         st.write(f"**Sugestão Gerada:** `{', '.join(map(str, grupo_selecionado['sugestao_gerada']))}`")
+        st.write(f"**Modelo utilizado:** `{grupo_selecionado['modelo_utilizado']}`")
 
         st.write("**Apostas Sugeridas:**")
         for i, jogo in enumerate(grupo_selecionado["apostas_sugeridas"], start=1):
@@ -102,6 +107,7 @@ if sorteios_disponiveis:
         if st.button("🗑️ Remover Grupo de Apostas"):
             remover_grupo_apostas(grupo_selecionado["id_grupo"])
             st.success(f"❌ Grupo `{grupo_selecionado['id_grupo']}` removido do banco!")
+            st.rerun()  # Atualiza automaticamente após a remoção
 
 else:
     st.write("⚠️ Nenhum sorteio com apostas registradas ainda.")
