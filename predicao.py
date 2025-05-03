@@ -1,73 +1,157 @@
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
-import numpy as np
-import pandas as pd
 
+# --------------------------------------------------
+# MÉTODO SUPERVISIONADO
+# --------------------------------------------------
 def treinar_modelo(df, modelo_escolhido="RandomForest"):
     """
-    Treina um modelo baseado na escolha do usuário, utilizando apenas as colunas de bolas.
-    Para isso, utiliza o resultado do sorteio anterior (X) para tentar prever os números do sorteio corrente (y).
+    Treina um modelo supervisionado utilizando os dados de sorteios.
+    Usa como features os sorteios deslocados (shift de 1) e como alvo o sorteio corrente.
     """
-    # Definir as colunas referentes aos números sorteados
-    colunas_bolas = [f"Bola{i}" for i in range(1, 16)]
+    # Seleciona somente as colunas dos números sorteados
+    colunas = [f"Bola{i}" for i in range(1, 16)]
     
-    # Obtém as features: sorteio anterior (shift) e remove as linhas onde o shift resulte em NA
-    X = df[colunas_bolas].shift(1).dropna()
-    # Como alvo (target), utiliza o sorteio atual correspondente às mesmas colunas
-    y = df.loc[X.index, colunas_bolas]
+    # Define X como o sorteio anterior e y como o sorteio corrente
+    X = df[colunas].shift(1).dropna()
+    y = df.loc[X.index, colunas]
     
-    # Debug: Verifica os tipos e valores da variável alvo
-    print("DEBUG: Tipos dos valores de y:", y.dtypes.to_dict())
-    print("DEBUG: Primeira linha de y:", y.iloc[0].tolist())
-    
-    # Binariza os números sorteados utilizando MultiLabelBinarizer
+    # Binariza a saída — cada sorteio é representado como uma lista de 15 números
     mlb = MultiLabelBinarizer()
-    # y.values.tolist() deve retornar uma lista de listas de inteiros
-    y_list = y.values.tolist()
-    y_bin = mlb.fit_transform(y_list)
+    y_bin = mlb.fit_transform(y.values.tolist())
     
-    # Divisão em treino e teste
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y_bin, test_size=0.2, random_state=42
-    )
-    
-    # Seleciona o modelo conforme a escolha do usuário
+    X_train, X_test, y_train, y_test = train_test_split(X, y_bin, test_size=0.2, random_state=42)
+
     if modelo_escolhido == "RandomForest":
         modelo = RandomForestClassifier()
     elif modelo_escolhido == "MLP":
         modelo = MLPClassifier(hidden_layer_sizes=(50, 50), max_iter=500)
     else:
         raise ValueError("Modelo inválido! Escolha 'RandomForest' ou 'MLP'.")
-    
+
     modelo.fit(X_train, y_train)
     return modelo, mlb
 
-def simulacao_monte_carlo(modelo, mlb, df, n_simulacoes=1000):
+def predicao_supervisionada(df, modelo_escolhido="RandomForest"):
     """
-    Simula combinações possíveis para prever padrões de sorteio.
-    Utiliza somente as colunas de bolas para manter a consistência dos dados.
-    """
-    colunas_bolas = [f"Bola{i}" for i in range(1, 16)]
+    Utiliza o modelo supervisionado para gerar uma predição baseada no último sorteio,
+    ajustando a saída para retornar exatamente 15 números.
     
-    simulacoes = []
-    for _ in range(n_simulacoes):
-        # Seleciona aleatoriamente um sorteio como entrada para a predição
-        entrada_simulada = df[colunas_bolas].sample(n=1).values
-        entrada_simulada_df = pd.DataFrame(entrada_simulada, columns=colunas_bolas)
+    Estratégia:
+      1. Treina o modelo utilizando os dados com shift.
+      2. Obtém as probabilidades para cada classe do último sorteio.
+      3. Ordena as classes (números) pela probabilidade da classe 1.
+      4. Seleciona os 15 números com maiores probabilidades e retorna a combinação ordenada.
+    """
+    modelo, mlb = treinar_modelo(df, modelo_escolhido)
+    colunas = [f"Bola{i}" for i in range(1, 16)]
+    X = df[colunas].shift(1).dropna()
+    last_sample = X.iloc[-1:]
+    
+    # Verifica se o modelo possui o método 'predict_proba'
+    if hasattr(modelo, "predict_proba"):
+        probas = modelo.predict_proba(last_sample)
         
-        predicao_binaria = modelo.predict(entrada_simulada_df)
-        numeros_sorteados = mlb.inverse_transform(predicao_binaria)[0]
-        
-        # Se o conjunto de números resultante tiver 15 ou mais elementos, sorteia 15 sem reposição;
-        # caso contrário, ordena e utiliza todos os números retornados.
-        if len(numeros_sorteados) >= 15:
-            numeros_sorteados = sorted(np.random.choice(numeros_sorteados, 15, replace=False))
+        # Se o retorno for uma lista (como acontece com RandomForest):
+        if isinstance(probas, list):
+            probs = []
+            for p in probas:
+                # p deve ter o shape (1,2): [prob(0), prob(1)]
+                probs.append(p[0][1])
+        # Se o retorno for um ndarray (como ocorre para MLP), ele terá shape (n_samples, n_labels)
+        elif isinstance(probas, np.ndarray):
+            probs = list(probas[0])
         else:
-            numeros_sorteados = sorted(numeros_sorteados)
+            probs = []
         
-        simulacoes.append(tuple(numeros_sorteados))
+        # mlb.classes_ contém os números (por exemplo, array([1, 2, 3, …, 25]))
+        classes = mlb.classes_
+        prob_dict = dict(zip(classes, probs))
+        
+        # Seleciona os 15 números com maior probabilidade e monta a predição
+        top15 = sorted(prob_dict, key=prob_dict.get, reverse=True)[:15]
+        prediction = sorted(top15)
+        print("Predição Supervisionada:", prediction)
+        return prediction
+    else:
+        # Fallback: usa o método predict se predict_proba não estiver disponível
+        pred_bin = modelo.predict(last_sample)
+        prediction = mlb.inverse_transform(pred_bin)[0]
+        if len(prediction) != 15:
+            prediction = sorted([int(n) for n in prediction])[:15]
+        print("Predição Supervisionada:", prediction)
+        return prediction
+
+# --------------------------------------------------
+# MÉTODO POR FREQUÊNCIA CONDICIONAL
+# --------------------------------------------------
+def predicao_frequencia(df, n_numeros=15):
+    """
+    Utiliza a matriz de frequência condicional para sugerir uma combinação baseada no último sorteio.
     
-    frequencias = pd.Series(simulacoes).value_counts()
-    return frequencias.head(10)
+    Estratégia:
+      - Calcula a matriz de co-ocorrência dos números usando os dados históricos.
+      - Para cada número de 1 a 25, calcula a média das probabilidades condicionais com base no último sorteio.
+      - Seleciona os n_numeros com maiores pontuações.
+    """
+    from frequencia import calcular_frequencia_condicional
+    freq_matrix = calcular_frequencia_condicional(df)
+    colunas = [f"Bola{i}" for i in range(1, 16)]
+    last_draw = df[colunas].iloc[-1].tolist()
+    scores = {}
+    for j in range(1, 26):
+        score = np.mean([freq_matrix.loc[i, j] for i in last_draw])
+        scores[j] = score
+    sorted_nums = sorted(scores, key=scores.get, reverse=True)
+    prediction = sorted(sorted_nums[:n_numeros])
+    print("Predição por Frequência Condicional:", prediction)
+    return prediction
+
+# --------------------------------------------------
+# MÉTODO POR CLUSTERING
+# --------------------------------------------------
+def predicao_clustering(df, n_numeros=15, num_clusters=5):
+    """
+    Converte os sorteios em vetores binários e aplica K-Means para identificar clusters.
+    Em seguida, usa o centro do cluster mais próximo do último sorteio para sugerir uma combinação.
+    
+    Estratégia:
+      - Converte o último sorteio em vetor binário.
+      - Calcula a distância Euclidiana entre esse vetor e cada centro.
+      - Seleciona os índices com maiores valores no centro do cluster mais próximo.
+    """
+    from clustering import clusterizar_sorteios, vetorizar_sorteio
+    labels, centers = clusterizar_sorteios(df, num_clusters=num_clusters)
+    colunas = [f"Bola{i}" for i in range(1, 16)]
+    last_draw = df[colunas].iloc[-1].tolist()
+    last_vector = vetorizar_sorteio(last_draw)
+    distances = [np.linalg.norm(last_vector - center) for center in centers]
+    best_cluster = np.argmin(distances)
+    center = centers[best_cluster]
+    candidate_order = np.argsort(-center)
+    prediction = sorted([int(n + 1) for n in candidate_order[:n_numeros]])
+    print("Predição por Clustering:", prediction)
+    return prediction
+
+# --------------------------------------------------
+# BLOCO DE TESTE INTERATIVO
+# --------------------------------------------------
+if __name__ == "__main__":
+    from dados import carregar_dados
+    df = carregar_dados("data/Lotofacil.xlsx")
+    if df is not None:
+        metodo = input("Escolha o método de predição (supervisionada / frequencia / clustering): ").strip().lower()
+        if metodo == "supervisionada":
+            predicao_supervisionada(df)
+        elif metodo == "frequencia":
+            predicao_frequencia(df)
+        elif metodo == "clustering":
+            predicao_clustering(df)
+        else:
+            print("Método Inválido!")
+    else:
+        print("Erro ao carregar os dados.")
