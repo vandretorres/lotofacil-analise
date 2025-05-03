@@ -12,8 +12,14 @@ df = carregar_dados()
 estatisticas = obter_estatisticas(df)
 
 # 📌 Definir variável `proximo_sorteio` globalmente
-ultimo_sorteio = estatisticas['ultimo_sorteio']
-proximo_sorteio = ultimo_sorteio + 1
+estatisticas = obter_estatisticas(df)
+
+# 📌 Inicializa a variável corretamente
+# 📌 Correção no painel.py
+print("\n🔎 DEBUG: Retorno de estatisticas:\n", estatisticas)
+
+ultimo_sorteio = estatisticas["ultimo_sorteio"] if estatisticas["ultimo_sorteio"] else 0
+proximo_sorteio = ultimo_sorteio + 1 if ultimo_sorteio > 0 else "Indisponível"
 
 
 # 📊 Configuração inicial do painel
