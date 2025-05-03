@@ -1,0 +1,149 @@
+import streamlit as st
+from zoneinfo import ZoneInfo
+from datetime import datetime
+import uuid
+
+from dados import carregar_dados
+from estatisticas import obter_estatisticas
+from predicao import predicao_supervisionada, predicao_frequencia, predicao_clustering
+from gerador_jogos import gerar_jogos
+from banco import (
+    listar_sorteios_com_apostas,
+    listar_apostas_por_sorteio,
+    salvar_grupo_apostas,
+    remover_grupo_apostas
+)
+
+# Cache de dados e estatísticas para evitar recarregamentos desnecessários
+@st.cache_data
+def get_data(arquivo: str = "data/Lotofacil.xlsx"):
+    return carregar_dados(arquivo)
+
+@st.cache_data
+def get_stats(df):
+    return obter_estatisticas(df)
+
+# Gera metadados consistentes para cada grupo de apostas
+def criar_metadata(modelo: str, sorteio: int):
+    return {
+        "id_grupo": str(uuid.uuid4()),
+        "data_geracao": datetime.now(tz=ZoneInfo("America/Sao_Paulo")).strftime("%Y-%m-%d %H:%M:%S"),
+        "sorteio_vinculado": sorteio,
+        "modelo_utilizado": modelo,
+    }
+
+# UI: Dashboard de estatísticas
+def show_dashboard(stats: dict):
+    st.header("📊 Histórico de Sorteios")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("📅 Último Sorteio", stats["ultimo_sorteio"])
+        prox = stats["ultimo_sorteio"] + 1 if stats["ultimo_sorteio"] else "N/A"
+        st.metric("🔜 Próximo Sorteio", prox)
+    with col2:
+        st.metric("📊 Total de Jogos", stats['total_jogos'])
+        st.metric("⭐ Números mais Frequentes", ", ".join(map(str, stats['mais_sorteados'])))
+
+# UI: Gerar novas apostas
+def show_generate(df, stats: dict):
+    st.header("🧠 Gerar Novas Apostas")
+    metodo = st.selectbox("Método de Predição", ["Supervisionada", "Frequência Condicional", "Clustering"])
+    modelo = None
+    if metodo == "Supervisionada":
+        modelo = st.radio("Modelo Supervisionado", ["RandomForest", "MLP"])
+
+    if st.button("🔄 Gerar Sugestões"):
+        with st.spinner("Processando predição..."):
+            # Escolha de modelo e geração de predição
+            if metodo == "Supervisionada":
+                result = predicao_supervisionada(df, modelo_escolhido=modelo)
+                desc = f"{metodo} - {modelo}"
+            elif metodo == "Frequência Condicional":
+                result = predicao_frequencia(df)
+                desc = metodo
+            else:
+                result = predicao_clustering(df)
+                desc = metodo
+
+            # Converter sugestões para lista de valores inteiros
+            try:
+                sugestoes = [int(n) for n in result]
+            except Exception:
+                sugestoes = list(result)
+
+            # Gerar jogos (configuração padrão: 5 jogos)
+            jogos_df = gerar_jogos(df, None, None)
+            jogos = [list(j) for j in jogos_df.index]
+
+            # Monta o grupo com metadados e resultados
+            meta = criar_metadata(desc, stats["ultimo_sorteio"] + 1 if stats["ultimo_sorteio"] else 0)
+            grupo = {
+                **meta,
+                "sugestao_gerada": sugestoes,
+                "apostas_sugeridas": jogos
+            }
+
+            st.session_state["grupo"] = grupo
+            st.success(f"✅ Grupo gerado! ID: {grupo['id_grupo'][-8:]} | Sorteio: {grupo['sorteio_vinculado']}")
+
+    # Exibe detalhes do grupo gerado (antes de salvar)
+    if grupo := st.session_state.get("grupo"):
+        st.subheader("📜 Detalhes do Grupo Gerado")
+        st.json({
+            "ID do Grupo": grupo["id_grupo"],
+            "Data de Geração": grupo["data_geracao"],
+            "Modelo Utilizado": grupo["modelo_utilizado"],
+            "Sugestão Gerada": grupo["sugestao_gerada"],
+            "Apostas Sugeridas": grupo["apostas_sugeridas"]
+        })
+        if st.button("💾 Salvar no Banco"):
+            salvar_grupo_apostas(grupo)
+            st.success("✅ Salvo com sucesso!")
+
+# UI: Gerenciar apostas salvas
+def show_manage():
+    st.header("📂 Gerenciar Apostas")
+    sorteios = listar_sorteios_com_apostas()
+    if not sorteios:
+        st.info("Nenhum sorteio com apostas registradas.")
+        return
+
+    sel_sorteio = st.selectbox("Selecione o Sorteio", sorteios)
+    grupos = listar_apostas_por_sorteio(sel_sorteio)
+    op_dict = {f"{g['id_grupo'][-8:]} - {g['modelo_utilizado']}": g for g in grupos}
+
+    if chave := st.selectbox("Selecione o Grupo", list(op_dict.keys())):
+        g = op_dict[chave]
+
+        # Corrigindo a exibição de dados
+        st.json({
+            "Data de Geração": g["data_geracao"],
+            "Sorteio Vinculado": g["sorteio_vinculado"],
+            "Modelo Utilizado": g["modelo_utilizado"],
+            "Sugestão Gerada": [int(n) for n in g["sugestao_gerada"]] if isinstance(g["sugestao_gerada"], (list, set, tuple)) else [int(n) for n in g["sugestao_gerada"]]
+            "Apostas Sugeridas": g["apostas_sugeridas"]
+        })
+
+        if st.button("🗑️ Remover Grupo"):
+            remover_grupo_apostas(g["id_grupo"])
+            st.success("❌ Removido com sucesso!")
+            st.experimental_rerun()
+
+# Função principal que roteia as seções
+def main():
+    st.set_page_config(page_title="Painel Lotofácil", layout="wide")
+    df = get_data()
+    stats = get_stats(df)
+
+    st.title("🎲 Painel Lotofácil")
+    menu = st.sidebar.radio("Menu", ["Dashboard", "Gerar Apostas", "Gerenciar Apostas"])
+
+    if menu == "Dashboard":
+        show_dashboard(stats)
+    elif menu == "Gerar Apostas":
+        show_generate(df, stats)
+    else:
+        show_manage()
+
+if __name__ == "__main__":
+    main()
