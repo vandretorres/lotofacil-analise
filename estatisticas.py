@@ -3,7 +3,7 @@ import pandas as pd
 def obter_estatisticas(df):
     """Calcula estatísticas gerais dos sorteios."""
     
-    print("\n🔎 DEBUG: Iniciando análise de estatísticas...\n")
+    #print("\n🔎 DEBUG: Iniciando análise de estatísticas...\n")
     
     # Exibir os tipos das colunas
     print("\n➡️ Tipos das colunas:\n", df.dtypes)
@@ -16,7 +16,7 @@ def obter_estatisticas(df):
     
     # Exibir valores únicos em cada coluna dos números sorteados antes de convertê-los
     for coluna in colunas_numeros:
-        print(f"\n🔎 DEBUG: Valores únicos em '{coluna}':\n", df[coluna].unique())
+        #print(f"\n🔎 DEBUG: Valores únicos em '{coluna}':\n", df[coluna].unique())
     
     # Converter as colunas de números sorteados para garantir o tipo numérico
     df[colunas_numeros] = df[colunas_numeros].apply(pd.to_numeric, errors="coerce").fillna(0).astype(int)

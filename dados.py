@@ -62,8 +62,8 @@ def carregar_dados(arquivo="data/Lotofacil.xlsx"):
         return None
 
     # Debug mínimo para validar se a base está completa
-    print("\n🔎 DEBUG: Número total de linhas lidas:", df.shape[0])
-    print("🔎 DEBUG: Colunas carregadas:", df.columns.tolist())
+    #print("\n🔎 DEBUG: Número total de linhas lidas:", df.shape[0])
+    #print("🔎 DEBUG: Colunas carregadas:", df.columns.tolist())
 
     if "Concurso" not in df.columns:
         print("⚠️ ERRO: Coluna 'Concurso' não encontrada no arquivo! Verifique o cabeçalho da planilha.")
@@ -71,8 +71,8 @@ def carregar_dados(arquivo="data/Lotofacil.xlsx"):
 
     # Converter a coluna "Concurso" para numérico
     df["Concurso"] = pd.to_numeric(df["Concurso"], errors="coerce").fillna(0).astype(int)
-    print("🔎 DEBUG: Valores únicos em 'Concurso' após conversão:", df["Concurso"].unique())
-    print("🔎 DEBUG: Maior valor em 'Concurso':", df["Concurso"].max())
+    #print("🔎 DEBUG: Valores únicos em 'Concurso' após conversão:", df["Concurso"].unique())
+    #print("🔎 DEBUG: Maior valor em 'Concurso':", df["Concurso"].max())
 
     # Validação adicional dos dados
     df = validar_dados(df)
