@@ -121,7 +121,7 @@ def show_manage():
     if st.button("🗑️ Remover Grupo"):
         remover_grupo_apostas(g['id_grupo'])
         st.success("❌ Grupo removido com sucesso!")
-        st.experimental_rerun()
+        st.rerun()
 
 # Função principal
 if __name__ == "__main__":
